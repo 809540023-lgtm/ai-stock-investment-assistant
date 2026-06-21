@@ -186,4 +186,44 @@ export const api = {
     request<Plan>(`/api/plans/${planId}/trades/${tradeId}`, { method: "DELETE" }),
 
   dashboard: () => request<Dashboard>("/api/dashboard"),
+
+  chart: (planId: number) => request<PlanChart>(`/api/plans/${planId}/chart`),
+  backtest: (planId: number, monthly?: number, years?: number) => {
+    const q = new URLSearchParams();
+    if (monthly != null) q.set("monthly", String(monthly));
+    if (years != null) q.set("years", String(years));
+    const qs = q.toString();
+    return request<Backtest>(`/api/plans/${planId}/backtest${qs ? "?" + qs : ""}`);
+  },
+};
+
+export type PlanChart = {
+  symbol: string;
+  name: string;
+  prices: { date: string; close: number }[];
+  average_cost: number | null;
+  current_price: number | null;
+  high_52w: number | null;
+  low_52w: number | null;
+  avg_price_1y: number | null;
+  trades: { date: string | null; action: "buy" | "sell"; price: number; shares: number }[];
+};
+
+export type Backtest = {
+  available: boolean;
+  reason?: string;
+  symbol?: string;
+  monthly?: number;
+  months?: number;
+  years?: number;
+  start_date?: string;
+  end_date?: string;
+  total_invested?: number;
+  total_shares?: number;
+  final_price?: number;
+  final_value?: number;
+  total_return_percent?: number;
+  annualized_return_percent?: number;
+  max_drawdown_percent?: number;
+  series?: { date: string; invested: number; value: number }[];
 };

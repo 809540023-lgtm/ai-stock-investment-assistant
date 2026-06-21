@@ -5,7 +5,7 @@ from .. import schemas
 from ..auth import get_current_user
 from ..database import get_db
 from ..models import InvestmentPlan, PlanUpdateLog, TradeRecord, User
-from ..services import plan_service, stock_data
+from ..services import backtest, plan_service, stock_data
 
 router = APIRouter(prefix="/api/plans", tags=["plans"])
 
@@ -118,6 +118,59 @@ def plan_updates(
         .order_by(PlanUpdateLog.created_at.desc())
         .all()
     )
+
+
+@router.get("/{plan_id}/chart")
+def plan_chart(
+    plan_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """股價走勢 + 成本線 / 均價 / 高低點 + 實際買賣標記，供前端畫圖。"""
+    plan = _get_owned_plan(plan_id, user, db)
+    prices = stock_data.get_price_history(plan.stock_symbol, days=365)
+    series = [{"date": p["date"], "close": p["close"]} for p in prices if p.get("close")]
+    closes = [p["close"] for p in series]
+    trades = (
+        db.query(TradeRecord)
+        .filter(TradeRecord.plan_id == plan.id)
+        .order_by(TradeRecord.traded_at.asc())
+        .all()
+    )
+    return {
+        "symbol": plan.stock_symbol,
+        "name": plan.stock_name,
+        "prices": series,
+        "average_cost": plan.average_cost,
+        "current_price": closes[-1] if closes else plan.current_price,
+        "high_52w": max(closes) if closes else None,
+        "low_52w": min(closes) if closes else None,
+        "avg_price_1y": round(sum(closes) / len(closes), 2) if closes else None,
+        "trades": [
+            {
+                "date": (t.traded_at.date().isoformat() if t.traded_at else None),
+                "action": t.action,
+                "price": t.price,
+                "shares": t.shares,
+            }
+            for t in trades
+        ],
+    }
+
+
+@router.get("/{plan_id}/backtest")
+def plan_backtest(
+    plan_id: int,
+    monthly: float | None = None,
+    years: float | None = None,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """定期定額回測：預設用計畫的每月金額與年限，可用 query 覆寫。"""
+    plan = _get_owned_plan(plan_id, user, db)
+    amount = monthly if monthly is not None else (plan.monthly_amount or 3000)
+    span = years if years is not None else (plan.investment_years or 3)
+    return backtest.run_backtest(plan.stock_symbol, amount, span)
 
 
 @router.get("/{plan_id}/trades", response_model=list[schemas.TradeOut])

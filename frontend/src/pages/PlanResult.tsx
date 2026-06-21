@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, Plan } from "../api";
 import TradeRecords from "../components/TradeRecords";
+import PriceChart from "../components/PriceChart";
+import Backtest from "../components/Backtest";
 
 const RISK_LABEL: Record<string, string> = {
   conservative: "保守型",
@@ -117,12 +119,16 @@ export default function PlanResult() {
         )}
       </div>
 
+      <PriceChart planId={plan.id} />
+
       {plan.ai_summary && (
         <div className="card" style={{ borderColor: "var(--accent)" }}>
           <div className="section-title">AI 投資摘要</div>
           <pre className="analysis">{plan.ai_summary}</pre>
         </div>
       )}
+
+      {isRecurring && <Backtest plan={plan} />}
 
       <TradeRecords plan={plan} onPlanChange={setPlan} />
 
