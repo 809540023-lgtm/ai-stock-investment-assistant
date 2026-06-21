@@ -77,6 +77,98 @@ def get_monthly_revenue(symbol: str) -> list[dict]:
     return out
 
 
+def get_monthly_revenue_full(symbol: str, months: int = 24) -> list[dict]:
+    """近 N 個月營收 + 年增率（YoY），用於月營收圖。"""
+    start = (date.today() - timedelta(days=int(months / 12 * 370) + 40)).isoformat()
+    data = _get("TaiwanStockMonthRevenue", symbol, start)
+    rows = []
+    for row in data:
+        rows.append(
+            {
+                "year": row.get("revenue_year"),
+                "month": row.get("revenue_month"),
+                "revenue": row.get("revenue"),
+            }
+        )
+    # 以 (year, month) 排序，計算 YoY
+    rows.sort(key=lambda r: (r["year"] or 0, r["month"] or 0))
+    by_key = {(r["year"], r["month"]): r["revenue"] for r in rows}
+    out = []
+    for r in rows:
+        prev = by_key.get((r["year"] - 1, r["month"])) if r["year"] else None
+        yoy = round((r["revenue"] - prev) / prev * 100, 1) if prev and r["revenue"] else None
+        out.append(
+            {
+                "label": f"{r['year']}/{r['month']:02d}" if r["month"] else str(r["year"]),
+                "revenue": round((r["revenue"] or 0) / 1e8, 2),  # 億元
+                "yoy": yoy,
+            }
+        )
+    return out[-months:]
+
+
+def get_financial_metrics(symbol: str) -> list[dict]:
+    """各季 EPS、毛利率、營益率、淨利率，用於獲利趨勢圖。"""
+    start = (date.today() - timedelta(days=1100)).isoformat()
+    data = _get("TaiwanStockFinancialStatements", symbol, start)
+    by_date: dict[str, dict] = {}
+    for row in data:
+        d = row.get("date")
+        t = row.get("type")
+        v = row.get("value")
+        if d and t:
+            by_date.setdefault(d, {})[t] = v
+    out = []
+    for d in sorted(by_date):
+        m = by_date[d]
+        rev = m.get("Revenue")
+        net = m.get("NetIncome") or m.get("IncomeAfterTaxes") or m.get("ProfitAfterTax")
+        out.append(
+            {
+                "date": d,
+                "eps": m.get("EPS"),
+                "gross_margin": round(m["GrossProfit"] / rev * 100, 1) if rev and m.get("GrossProfit") else None,
+                "op_margin": round(m["OperatingIncome"] / rev * 100, 1) if rev and m.get("OperatingIncome") else None,
+                "net_margin": round(net / rev * 100, 1) if rev and net else None,
+            }
+        )
+    return out[-12:]
+
+
+def get_dividends(symbol: str) -> list[dict]:
+    """歷年配息（現金/股票股利）。"""
+    data = _get("TaiwanStockDividend", symbol, "2016-01-01")
+    by_year: dict[str, dict] = {}
+    for row in data:
+        # CashEarningsDistribution / StockEarningsDistribution 為每股配發
+        y = (row.get("date") or "")[:4]
+        if not y:
+            continue
+        cash = row.get("CashEarningsDistribution") or 0
+        stock = row.get("StockEarningsDistribution") or 0
+        agg = by_year.setdefault(y, {"year": y, "cash": 0.0, "stock": 0.0})
+        agg["cash"] += cash
+        agg["stock"] += stock
+    out = [
+        {"year": v["year"], "cash": round(v["cash"], 2), "stock": round(v["stock"], 2)}
+        for v in by_year.values()
+        if v["cash"] or v["stock"]
+    ]
+    return sorted(out, key=lambda r: r["year"])[-10:]
+
+
+def get_margin_trading(symbol: str, days: int = 60) -> list[dict]:
+    """融資餘額趨勢（張），反映散戶槓桿。"""
+    start = (date.today() - timedelta(days=days)).isoformat()
+    data = _get("TaiwanStockMarginPurchaseShortSale", symbol, start)
+    out = []
+    for row in data:
+        bal = row.get("MarginPurchaseTodayBalance")
+        if bal is not None:
+            out.append({"date": row.get("date"), "margin_balance": round(bal / 1000)})
+    return out[-days:]
+
+
 def get_financials(symbol: str) -> list[dict]:
     start = (date.today() - timedelta(days=900)).isoformat()
     data = _get("TaiwanStockFinancialStatements", symbol, start)

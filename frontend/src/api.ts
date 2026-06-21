@@ -207,6 +207,28 @@ export const api = {
 
   planHealth: (planId: number) => request<HealthScore>(`/api/plans/${planId}/health`),
 
+  revenue: (symbol: string) =>
+    request<{ data: { label: string; revenue: number; yoy: number | null }[] }>(
+      `/api/stocks/${symbol}/revenue`
+    ),
+  financials: (symbol: string) =>
+    request<{ data: FinancialPoint[] }>(`/api/stocks/${symbol}/financials`),
+  dividends: (symbol: string) =>
+    request<{ data: { year: string; cash: number; stock: number }[] }>(
+      `/api/stocks/${symbol}/dividends`
+    ),
+  margin: (symbol: string) =>
+    request<{ data: { date: string; margin_balance: number }[] }>(
+      `/api/stocks/${symbol}/margin`
+    ),
+  compareStocks: (symbols: string[]) =>
+    request<CompareRow[]>(`/api/stocks/compare?symbols=${encodeURIComponent(symbols.join(","))}`),
+  askPlan: (planId: number, question: string) =>
+    request<{ answer: string; demo: boolean }>(`/api/plans/${planId}/ask`, {
+      method: "POST",
+      body: JSON.stringify({ question }),
+    }),
+
   chart: (planId: number) => request<PlanChart>(`/api/plans/${planId}/chart`),
   backtest: (planId: number, monthly?: number, years?: number) => {
     const q = new URLSearchParams();
@@ -288,4 +310,22 @@ export type HealthScore = {
   per: number | null;
   dividend_yield: number | null;
   pbr: number | null;
+};
+
+export type FinancialPoint = {
+  date: string;
+  eps: number | null;
+  gross_margin: number | null;
+  op_margin: number | null;
+  net_margin: number | null;
+};
+
+export type CompareRow = {
+  symbol: string;
+  name: string;
+  current_price: number | null;
+  year_change_percent: number | null;
+  per: number | null;
+  pbr: number | null;
+  dividend_yield: number | null;
 };

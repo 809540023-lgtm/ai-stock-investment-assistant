@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { api, Dashboard as DashboardData } from "../api";
 
 function pnlClass(v: number) {
@@ -8,6 +9,8 @@ function pnlClass(v: number) {
 function fmt(n: number) {
   return n.toLocaleString("zh-TW", { maximumFractionDigits: 0 });
 }
+
+const PIE_COLORS = ["#4f8cff", "#3fb950", "#f0a020", "#a371f7", "#f0506e", "#2fb380", "#e6688a", "#5bc0de"];
 
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -52,6 +55,34 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {(() => {
+        const alloc = data.plans
+          .filter((p) => p.market_value > 0)
+          .map((p) => ({ name: `${p.stock_name}(${p.stock_symbol})`, value: Math.round(p.market_value) }));
+        if (alloc.length < 1) return null;
+        return (
+          <div className="card">
+            <div className="section-title">投資組合配置（依市值）</div>
+            <div style={{ width: "100%", height: 280 }}>
+              <ResponsiveContainer>
+                <PieChart>
+                  <Pie data={alloc} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} innerRadius={50} paddingAngle={2}>
+                    {alloc.map((_, i) => (
+                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{ background: "var(--panel)", border: "1px solid var(--border)", borderRadius: 8 }}
+                    formatter={(v: number) => `$${fmt(v)}`}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="card">
         <div className="section-title">各計畫明細</div>

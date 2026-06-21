@@ -173,6 +173,35 @@ def plan_backtest(
     return backtest.run_backtest(plan.stock_symbol, amount, span)
 
 
+@router.post("/{plan_id}/ask")
+def ask_plan(
+    plan_id: int,
+    body: dict,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """針對此計畫的股票向 AI 追問。"""
+    plan = _get_owned_plan(plan_id, user, db)
+    question = (body or {}).get("question", "").strip()
+    if not question:
+        raise HTTPException(status_code=400, detail="請輸入問題")
+    from ..services import ai_service
+
+    snapshot = stock_data.build_snapshot(plan.stock_symbol)
+    plan_dict = {
+        "plan_type": plan.plan_type,
+        "stock_symbol": plan.stock_symbol,
+        "monthly_amount": plan.monthly_amount,
+        "investment_years": plan.investment_years,
+        "risk_profile": plan.risk_profile,
+        "average_cost": plan.average_cost,
+        "shares_owned": plan.shares_owned,
+        "target_return_percent": plan.target_return_percent,
+        "max_loss_percent": plan.max_loss_percent,
+    }
+    return ai_service.ask(plan_dict, snapshot, question, plan.ai_summary or "")
+
+
 @router.get("/{plan_id}/health")
 def plan_health(
     plan_id: int,

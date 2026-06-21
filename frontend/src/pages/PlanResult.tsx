@@ -6,7 +6,10 @@ import PriceChart from "../components/PriceChart";
 import Backtest from "../components/Backtest";
 import PlanInsights from "../components/PlanInsights";
 import StockAnalytics from "../components/StockAnalytics";
+import StockFundamentals from "../components/StockFundamentals";
 import TargetPriceCalc from "../components/TargetPriceCalc";
+import DividendGoal from "../components/DividendGoal";
+import AskAI from "../components/AskAI";
 
 const RISK_LABEL: Record<string, string> = {
   conservative: "保守型",
@@ -70,6 +73,9 @@ export default function PlanResult() {
           <button className="ghost small" onClick={reanalyze} disabled={busy}>
             {busy ? "更新中…" : "重新分析"}
           </button>
+          <button className="ghost small" onClick={() => window.print()}>
+            列印／匯出 PDF
+          </button>
           <Link to={`/plans/${plan.id}/updates`}>
             <button className="ghost small">每月更新紀錄</button>
           </Link>
@@ -128,6 +134,8 @@ export default function PlanResult() {
 
       <StockAnalytics symbol={plan.stock_symbol} />
 
+      <StockFundamentals symbol={plan.stock_symbol} />
+
       {plan.ai_summary && (
         <div className="card" style={{ borderColor: "var(--accent)" }}>
           <div className="section-title">AI 投資摘要</div>
@@ -135,7 +143,11 @@ export default function PlanResult() {
         </div>
       )}
 
+      <AskAI planId={plan.id} />
+
       <TargetPriceCalc plan={plan} />
+
+      <DividendGoal plan={plan} />
 
       {isRecurring && <Backtest plan={plan} />}
 

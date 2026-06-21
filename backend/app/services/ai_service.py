@@ -65,6 +65,41 @@ def _enrich(snapshot: dict, symbol: str) -> dict:
     return snapshot
 
 
+def ask(plan: dict, snapshot: dict, question: str, prior_summary: str = "") -> dict:
+    """針對個股的 AI 追問，回傳自然語言回答（非 JSON）。"""
+    if not settings.ai_enabled:
+        return {
+            "answer": "（示範模式）設定 ANTHROPIC_API_KEY 後即可使用 AI 追問。"
+            "目前可參考下方的分析與圖表自行判斷。",
+            "demo": True,
+        }
+    snapshot = _enrich(snapshot, snapshot.get("symbol") or plan.get("stock_symbol", ""))
+    system = (
+        "你是專業的台股投資顧問，會員會就某一檔股票提出追問。"
+        "請根據提供的資料，用繁體中文、條理清楚地回答，"
+        "務必中立客觀、提醒風險，避免絕對保證。回答控制在 6 句內。"
+    )
+    context = prompts.user_content(plan, snapshot)
+    if prior_summary:
+        context += f"\n先前的 AI 分析摘要：{prior_summary}\n"
+    user = f"{context}\n會員的問題：{question}"
+    try:
+        from anthropic import Anthropic
+
+        client = Anthropic(api_key=settings.anthropic_api_key)
+        resp = client.messages.create(
+            model=settings.anthropic_model,
+            max_tokens=1024,
+            system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
+            messages=[{"role": "user", "content": user}],
+        )
+        text = "".join(b.text for b in resp.content if b.type == "text")
+        return {"answer": text.strip(), "demo": False}
+    except Exception as exc:
+        logger.warning("AI 追問失敗：%s", exc)
+        return {"answer": "AI 暫時無法回答，請稍後再試。", "demo": False}
+
+
 def analyze(plan: dict, snapshot: dict) -> dict:
     plan_type = plan.get("plan_type", "full_analysis")
     snapshot = _enrich(snapshot, snapshot.get("symbol") or plan.get("stock_symbol", ""))
