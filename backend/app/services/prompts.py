@@ -36,6 +36,43 @@ def _data_block(snapshot: dict) -> str:
     return json.dumps(snapshot, ensure_ascii=False, indent=2)
 
 
+# ---- 供 prompt caching 使用：固定的系統指令（可被快取）與動態的資料區 ----
+
+SYSTEM_FULL = (
+    "你是一位專業的台股投資分析師。會員會提供單一股票的市場與財報資料，"
+    "請做「完整股票分析」，協助判斷是否適合長期持有，並產出明確的操作規則。\n"
+    + OUTPUT_FIELDS_COMMON
+)
+
+SYSTEM_RECURRING = (
+    "你是一位專業的台股投資分析師。會員會提供單一股票資料，"
+    "請為「零存整付（定期定額）」會員設計每月投入計畫，"
+    "重點在每月投入多少、買多少股、保留多少現金、何時加碼或暫停。\n"
+    + OUTPUT_FIELDS_COMMON
+    + RECURRING_EXTRA_FIELDS
+)
+
+
+def user_content(plan: dict, snapshot: dict) -> str:
+    extra = ""
+    if plan.get("monthly_amount"):
+        extra = (
+            f"- 每月投入金額：{plan.get('monthly_amount')} 元\n"
+            f"- 投資年限：{plan.get('investment_years')} 年\n"
+            f"- 風險偏好：{plan.get('risk_profile')}\n"
+        )
+    return f"""股票代號：{snapshot.get('symbol')}（{snapshot.get('name')}）
+會員設定：
+- 持股成本（如有）：{plan.get('average_cost')}
+- 目前持股數（如有）：{plan.get('shares_owned')}
+- 目標報酬率(%)：{plan.get('target_return_percent')}
+- 可承受最大虧損(%)：{plan.get('max_loss_percent')}
+{extra}
+以下是抓到的市場與財報資料（data_available 為 false 代表查無即時資料，請謹慎分析並於 risk_notes 標註）：
+{_data_block(snapshot)}
+"""
+
+
 def full_analysis_prompt(plan: dict, snapshot: dict) -> str:
     return f"""你是一位專業的台股投資分析師。請針對以下單一股票做「完整股票分析」，
 協助會員判斷是否適合長期持有，並產出明確的操作規則。

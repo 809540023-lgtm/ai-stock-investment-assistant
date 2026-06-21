@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
 from .database import Base, engine
-from .routers import auth, dashboard, plans, reminders
+from .routers import auth, dashboard, plans, reminders, stocks, watchlist
 from .scheduler import run_monthly_update, scheduler, start_scheduler
 
 logging.basicConfig(level=logging.INFO)
@@ -41,6 +41,8 @@ app.include_router(auth.router)
 app.include_router(plans.router)
 app.include_router(reminders.router)
 app.include_router(dashboard.router)
+app.include_router(stocks.router)
+app.include_router(watchlist.router)
 
 
 @app.get("/api/health")

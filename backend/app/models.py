@@ -121,6 +121,19 @@ class Reminder(Base):
     plan = relationship("InvestmentPlan", back_populates="reminders")
 
 
+class WatchlistItem(Base):
+    """觀察清單：尚未建立完整計畫，但想追蹤的股票。"""
+
+    __tablename__ = "watchlist_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    stock_symbol = Column(String, nullable=False, index=True)
+    stock_name = Column(String, nullable=False, default="")
+    note = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class TradeRecord(Base):
     """會員實際買進／賣出的紀錄。"""
 

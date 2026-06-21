@@ -5,7 +5,7 @@ from .. import schemas
 from ..auth import get_current_user
 from ..database import get_db
 from ..models import InvestmentPlan, PlanUpdateLog, TradeRecord, User
-from ..services import backtest, plan_service, stock_data
+from ..services import backtest, health, plan_service, stock_data
 
 router = APIRouter(prefix="/api/plans", tags=["plans"])
 
@@ -171,6 +171,17 @@ def plan_backtest(
     amount = monthly if monthly is not None else (plan.monthly_amount or 3000)
     span = years if years is not None else (plan.investment_years or 3)
     return backtest.run_backtest(plan.stock_symbol, amount, span)
+
+
+@router.get("/{plan_id}/health")
+def plan_health(
+    plan_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """計畫健康度評分（估值/趨勢/成本/本益比綜合）。"""
+    plan = _get_owned_plan(plan_id, user, db)
+    return health.score_plan(plan)
 
 
 @router.get("/{plan_id}/trades", response_model=list[schemas.TradeOut])

@@ -141,6 +141,23 @@ class TradeOut(BaseModel):
         from_attributes = True
 
 
+# ---------- Watchlist ----------
+class WatchlistCreate(BaseModel):
+    stock_symbol: str
+    note: Optional[str] = None
+
+
+class WatchlistOut(BaseModel):
+    id: int
+    stock_symbol: str
+    stock_name: str
+    note: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # ---------- Dashboard ----------
 class DashboardPlan(BaseModel):
     id: int

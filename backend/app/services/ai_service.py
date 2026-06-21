@@ -25,29 +25,60 @@ def _extract_json(text: str) -> dict:
     return json.loads(text)
 
 
-def _call_claude(prompt: str) -> dict:
+def _call_claude(system: str, user: str) -> dict:
     from anthropic import Anthropic
 
     client = Anthropic(api_key=settings.anthropic_api_key)
     resp = client.messages.create(
         model=settings.anthropic_model,
         max_tokens=8192,
-        messages=[{"role": "user", "content": prompt}],
+        # 固定的系統指令加上 cache_control，重複分析時可命中快取、降低成本與延遲
+        system=[
+            {"type": "text", "text": system, "cache_control": {"type": "ephemeral"}},
+        ],
+        messages=[{"role": "user", "content": user}],
     )
     text = "".join(block.text for block in resp.content if block.type == "text")
+    usage = getattr(resp, "usage", None)
+    if usage is not None:
+        logger.info(
+            "Claude usage in=%s out=%s cache_read=%s cache_write=%s",
+            getattr(usage, "input_tokens", "?"),
+            getattr(usage, "output_tokens", "?"),
+            getattr(usage, "cache_read_input_tokens", 0),
+            getattr(usage, "cache_creation_input_tokens", 0),
+        )
     return _extract_json(text)
+
+
+def _enrich(snapshot: dict, symbol: str) -> dict:
+    """把估值與法人籌碼補進快照，讓 AI 有更多依據。"""
+    try:
+        from . import stock_data
+
+        snapshot = dict(snapshot)
+        snapshot["valuation"] = stock_data.get_valuation(symbol)
+        inst = stock_data.get_institutional(symbol, days=10)
+        snapshot["institutional_recent"] = inst[-5:]
+    except Exception as exc:  # 補充資料失敗不影響主流程
+        logger.warning("補充估值/法人資料失敗：%s", exc)
+    return snapshot
 
 
 def analyze(plan: dict, snapshot: dict) -> dict:
     plan_type = plan.get("plan_type", "full_analysis")
-    if plan_type == "recurring_investment":
-        prompt = prompts.recurring_prompt(plan, snapshot)
-    else:
-        prompt = prompts.full_analysis_prompt(plan, snapshot)
+    snapshot = _enrich(snapshot, snapshot.get("symbol") or plan.get("stock_symbol", ""))
+
+    system = (
+        prompts.SYSTEM_RECURRING
+        if plan_type == "recurring_investment"
+        else prompts.SYSTEM_FULL
+    )
+    user = prompts.user_content(plan, snapshot)
 
     if settings.ai_enabled:
         try:
-            return _call_claude(prompt)
+            return _call_claude(system, user)
         except Exception as exc:
             logger.warning("Claude 分析失敗，改用規則式輸出：%s", exc)
 
