@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
+import StockSearch from "../components/StockSearch";
 
 export default function FullAnalysisForm() {
   const nav = useNavigate();
@@ -38,8 +39,8 @@ export default function FullAnalysisForm() {
       <h1 className="page-title">完整股票分析計劃</h1>
       <p className="page-sub">輸入股票代號與你的持股狀況，AI 會產生完整分析與操作規則</p>
       <form onSubmit={submit} className="card" style={{ maxWidth: 640 }}>
-        <label>股票代號（台股，例如 2330）</label>
-        <input value={symbol} onChange={(e) => setSymbol(e.target.value)} placeholder="2330" required />
+        <label>股票（輸入代號或名稱搜尋）</label>
+        <StockSearch value={symbol} onPick={(s) => setSymbol(s)} />
         <div className="grid-2">
           <div>
             <label>持股成本（選填）</label>

@@ -4,6 +4,9 @@ import { api, Plan } from "../api";
 import TradeRecords from "../components/TradeRecords";
 import PriceChart from "../components/PriceChart";
 import Backtest from "../components/Backtest";
+import PlanInsights from "../components/PlanInsights";
+import StockAnalytics from "../components/StockAnalytics";
+import TargetPriceCalc from "../components/TargetPriceCalc";
 
 const RISK_LABEL: Record<string, string> = {
   conservative: "保守型",
@@ -119,7 +122,11 @@ export default function PlanResult() {
         )}
       </div>
 
+      <PlanInsights planId={plan.id} />
+
       <PriceChart planId={plan.id} />
+
+      <StockAnalytics symbol={plan.stock_symbol} />
 
       {plan.ai_summary && (
         <div className="card" style={{ borderColor: "var(--accent)" }}>
@@ -127,6 +134,8 @@ export default function PlanResult() {
           <pre className="analysis">{plan.ai_summary}</pre>
         </div>
       )}
+
+      <TargetPriceCalc plan={plan} />
 
       {isRecurring && <Backtest plan={plan} />}
 

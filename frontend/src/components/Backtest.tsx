@@ -127,6 +127,29 @@ export default function Backtest({ plan }: { plan: Plan }) {
             </div>
           </div>
 
+          {data.benchmark && (
+            <div
+              className="card"
+              style={{ marginTop: 12, background: "rgba(79,140,255,0.06)", borderColor: "var(--accent)" }}
+            >
+              <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                <span>
+                  同期改投 <b>大盤 ETF {data.benchmark.symbol}</b>：
+                  <b style={{ color: (data.benchmark.total_return_percent ?? 0) >= 0 ? C.green : C.danger }}>
+                    {" "}{data.benchmark.total_return_percent >= 0 ? "+" : ""}{data.benchmark.total_return_percent}%
+                  </b>
+                </span>
+                <span>
+                  本檔{" "}
+                  <b style={{ color: data.benchmark.outperformance_percent >= 0 ? C.green : C.danger }}>
+                    {data.benchmark.outperformance_percent >= 0 ? "勝出 +" : "落後 "}
+                    {data.benchmark.outperformance_percent}%
+                  </b>
+                </span>
+              </div>
+            </div>
+          )}
+
           <div style={{ width: "100%", height: 260, marginTop: 12 }}>
             <ResponsiveContainer>
               <AreaChart data={data.series} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>

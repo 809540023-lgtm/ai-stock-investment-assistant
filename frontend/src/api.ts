@@ -187,6 +187,26 @@ export const api = {
 
   dashboard: () => request<Dashboard>("/api/dashboard"),
 
+  searchStocks: (q: string) =>
+    request<StockHit[]>(`/api/stocks/search?q=${encodeURIComponent(q)}`),
+  valuation: (symbol: string) => request<Valuation>(`/api/stocks/${symbol}/valuation`),
+  perBand: (symbol: string) => request<PerBand>(`/api/stocks/${symbol}/per-band`),
+  institutional: (symbol: string) =>
+    request<{ symbol: string; data: { date: string; net_lots: number }[] }>(
+      `/api/stocks/${symbol}/institutional`
+    ),
+
+  watchlist: () => request<WatchItem[]>("/api/watchlist"),
+  addWatch: (stock_symbol: string, note?: string) =>
+    request<unknown>("/api/watchlist", {
+      method: "POST",
+      body: JSON.stringify({ stock_symbol, note }),
+    }),
+  removeWatch: (id: number) =>
+    request<{ ok: boolean }>(`/api/watchlist/${id}`, { method: "DELETE" }),
+
+  planHealth: (planId: number) => request<HealthScore>(`/api/plans/${planId}/health`),
+
   chart: (planId: number) => request<PlanChart>(`/api/plans/${planId}/chart`),
   backtest: (planId: number, monthly?: number, years?: number) => {
     const q = new URLSearchParams();
@@ -226,4 +246,46 @@ export type Backtest = {
   annualized_return_percent?: number;
   max_drawdown_percent?: number;
   series?: { date: string; invested: number; value: number }[];
+  benchmark?: {
+    symbol: string;
+    total_return_percent: number;
+    final_value: number;
+    outperformance_percent: number;
+  };
+};
+
+export type StockHit = { symbol: string; name: string };
+
+export type Valuation = {
+  per: number | null;
+  pbr: number | null;
+  dividend_yield: number | null;
+  date: string | null;
+  name?: string;
+};
+
+export type PerBand = {
+  symbol: string;
+  history: { date: string; per: number }[];
+  bands: { low: number; mid: number; high: number } | null;
+};
+
+export type WatchItem = {
+  id: number;
+  stock_symbol: string;
+  stock_name: string;
+  note: string | null;
+  current_price: number | null;
+  change_percent: number | null;
+  created_at: string;
+};
+
+export type HealthScore = {
+  score: number;
+  level: "good" | "neutral" | "caution";
+  label: string;
+  reasons: string[];
+  per: number | null;
+  dividend_yield: number | null;
+  pbr: number | null;
 };

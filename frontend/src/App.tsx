@@ -10,6 +10,7 @@ import PlanResult from "./pages/PlanResult";
 import MyPlans from "./pages/MyPlans";
 import UpdateRecords from "./pages/UpdateRecords";
 import Reminders from "./pages/Reminders";
+import Watchlist from "./pages/Watchlist";
 
 export default function App() {
   const { user, loading } = useAuth();
@@ -38,6 +39,7 @@ export default function App() {
         <Route path="/plans" element={<MyPlans />} />
         <Route path="/plans/:id" element={<PlanResult />} />
         <Route path="/plans/:id/updates" element={<UpdateRecords />} />
+        <Route path="/watchlist" element={<Watchlist />} />
         <Route path="/reminders" element={<Reminders />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
+import StockSearch from "../components/StockSearch";
 
 export default function RecurringForm() {
   const nav = useNavigate();
@@ -40,8 +41,8 @@ export default function RecurringForm() {
       <h1 className="page-title">零存整付投資計劃</h1>
       <p className="page-sub">設定每月投入金額，AI 會試算每月買進比例、現金保留與加碼／暫停規則</p>
       <form onSubmit={submit} className="card" style={{ maxWidth: 640 }}>
-        <label>股票代號（台股，例如 0050）</label>
-        <input value={symbol} onChange={(e) => setSymbol(e.target.value)} placeholder="0050" required />
+        <label>股票（輸入代號或名稱搜尋）</label>
+        <StockSearch value={symbol} onPick={(s) => setSymbol(s)} />
         <div className="grid-2">
           <div>
             <label>每月投入金額（元）</label>

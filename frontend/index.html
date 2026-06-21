@@ -4,6 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>林博台股AI 投資助理</title>
+    <script>
+      // 在畫面渲染前套用主題，避免閃爍
+      document.documentElement.setAttribute(
+        "data-theme",
+        localStorage.getItem("ai_invest_theme") || "dark"
+      );
+    </script>
   </head>
   <body>
     <div id="root"></div>
