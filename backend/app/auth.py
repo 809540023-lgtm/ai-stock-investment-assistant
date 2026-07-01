@@ -48,3 +48,26 @@ def get_current_user(
     if user is None:
         raise cred_exc
     return user
+
+
+def _admin_emails() -> set[str]:
+    return {e.strip().lower() for e in settings.admin_emails.split(",") if e.strip()}
+
+
+def is_admin_user(user: User) -> bool:
+    return bool(getattr(user, "is_admin", False)) or user.email.lower() in _admin_emails()
+
+
+def promote_if_admin_email(user: User, db: Session) -> None:
+    """登入/註冊時，若 email 在 ADMIN_EMAILS 名單且尚未標記，補上 is_admin。"""
+    if not user.is_admin and user.email.lower() in _admin_emails():
+        user.is_admin = True
+        db.commit()
+        db.refresh(user)
+
+
+def get_current_admin(user: User = Depends(get_current_user)) -> User:
+    """管理端 API 用：需 is_admin 或在 ADMIN_EMAILS 名單內，否則 403。"""
+    if not is_admin_user(user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要管理員權限")
+    return user

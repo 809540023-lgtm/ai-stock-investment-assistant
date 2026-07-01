@@ -3,7 +3,13 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from .. import schemas
-from ..auth import create_access_token, get_current_user, hash_password, verify_password
+from ..auth import (
+    create_access_token,
+    get_current_user,
+    hash_password,
+    promote_if_admin_email,
+    verify_password,
+)
 from ..database import get_db
 from ..models import User
 
@@ -22,6 +28,7 @@ def register(data: schemas.UserCreate, db: Session = Depends(get_db)):
     db.add(user)
     db.commit()
     db.refresh(user)
+    promote_if_admin_email(user, db)
     token = create_access_token(user.id)
     return {"access_token": token, "user": user}
 
@@ -32,6 +39,7 @@ def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get
     user = db.query(User).filter(User.email == form.username).first()
     if not user or not verify_password(form.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="email 或密碼錯誤")
+    promote_if_admin_email(user, db)
     token = create_access_token(user.id)
     return {"access_token": token, "user": user}
 

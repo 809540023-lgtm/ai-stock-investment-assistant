@@ -12,6 +12,7 @@ import UpdateRecords from "./pages/UpdateRecords";
 import Reminders from "./pages/Reminders";
 import Watchlist from "./pages/Watchlist";
 import Compare from "./pages/Compare";
+import Leads from "./pages/Leads";
 
 export default function App() {
   const { user, loading } = useAuth();
@@ -42,6 +43,10 @@ export default function App() {
         <Route path="/plans/:id/updates" element={<UpdateRecords />} />
         <Route path="/watchlist" element={<Watchlist />} />
         <Route path="/compare" element={<Compare />} />
+        <Route
+          path="/leads"
+          element={user.is_admin ? <Leads /> : <Navigate to="/dashboard" replace />}
+        />
         <Route path="/reminders" element={<Reminders />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

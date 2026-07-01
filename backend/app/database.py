@@ -26,3 +26,34 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+# create_all 只會建「缺少的資料表」，不會幫既有資料表補欄位。
+# 這裡用輕量、可重複執行的 ALTER 把新欄位補上（SQLite 與 PostgreSQL 皆適用）。
+_NEW_COLUMNS: dict[str, dict[str, str]] = {
+    "users": {
+        "is_admin": "BOOLEAN DEFAULT FALSE",
+        "phone_number": "VARCHAR",
+        "voice_consent": "BOOLEAN DEFAULT FALSE",
+        "voice_consent_at": "TIMESTAMP",
+        "voice_opt_out": "BOOLEAN DEFAULT FALSE",
+    },
+    "voice_call_logs": {
+        "lead_id": "INTEGER",
+    },
+}
+
+
+def ensure_schema() -> None:
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(engine)
+    tables = set(inspector.get_table_names())
+    with engine.begin() as conn:
+        for table, columns in _NEW_COLUMNS.items():
+            if table not in tables:
+                continue  # 全新表由 create_all 直接建好完整結構
+            existing = {c["name"] for c in inspector.get_columns(table)}
+            for name, ddl in columns.items():
+                if name not in existing:
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}"))

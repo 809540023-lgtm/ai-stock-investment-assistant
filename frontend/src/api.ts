@@ -45,7 +45,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return res.json();
 }
 
-export type User = { id: number; email: string; name: string };
+export type User = { id: number; email: string; name: string; is_admin?: boolean };
 
 export type Plan = {
   id: number;
@@ -229,6 +229,54 @@ export const api = {
       body: JSON.stringify({ question }),
     }),
 
+  // ---- 名單與語音外撥 ----
+  leadsStats: () => request<LeadStats>("/api/leads/stats"),
+  listLeads: (status = "", limit = 200) => {
+    const q = new URLSearchParams();
+    if (status) q.set("status", status);
+    q.set("limit", String(limit));
+    return request<LeadRow[]>(`/api/leads?${q.toString()}`);
+  },
+  importLeads: async (file: File, source: string, region: string) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("source", source);
+    fd.append("region", region);
+    const headers: Record<string, string> = {};
+    const token = getToken();
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const res = await fetch(url("/api/leads/import"), { method: "POST", headers, body: fd });
+    if (!res.ok) {
+      const b = await res.json().catch(() => ({}));
+      throw new Error(b.detail || `匯入失敗 (${res.status})`);
+    }
+    return res.json() as Promise<ImportResult>;
+  },
+  downloadInvitesCsv: async (onlyValid = true) => {
+    const headers: Record<string, string> = {};
+    const token = getToken();
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const res = await fetch(url(`/api/leads/invites.csv?only_valid=${onlyValid}`), { headers });
+    if (!res.ok) throw new Error(`匯出失敗 (${res.status})`);
+    const blob = await res.blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "invites.csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  },
+  callLead: (lead_id: number) =>
+    request<VoiceCallLog>("/api/voice/outbound-call-lead", {
+      method: "POST",
+      body: JSON.stringify({ lead_id }),
+    }),
+  getVoiceScript: () => request<{ script: string }>("/api/voice/script"),
+  setVoiceScript: (script: string) =>
+    request<{ script: string }>("/api/voice/script", {
+      method: "PUT",
+      body: JSON.stringify({ script }),
+    }),
+
   chart: (planId: number) => request<PlanChart>(`/api/plans/${planId}/chart`),
   backtest: (planId: number, monthly?: number, years?: number) => {
     const q = new URLSearchParams();
@@ -274,6 +322,45 @@ export type Backtest = {
     final_value: number;
     outperformance_percent: number;
   };
+};
+
+export type LeadRow = {
+  id: number;
+  name: string;
+  phone: string;
+  phone_valid: boolean;
+  category: string | null;
+  status: string;
+  consent: boolean;
+  invite_url: string;
+};
+
+export type LeadStats = {
+  total: number;
+  by_status: Record<string, number>;
+  consented: number;
+  needs_review: number;
+};
+
+export type ImportResult = {
+  source: string;
+  added: number;
+  skipped_duplicates: number;
+  needs_review: number;
+};
+
+export type VoiceCallLog = {
+  id: number;
+  user_id: number | null;
+  lead_id: number | null;
+  direction: string;
+  to_number: string;
+  purpose: string | null;
+  message: string | null;
+  call_sid: string | null;
+  status: string | null;
+  consent_at_call: boolean;
+  created_at: string;
 };
 
 export type StockHit = { symbol: string; name: string };

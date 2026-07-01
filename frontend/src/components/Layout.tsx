@@ -45,6 +45,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         {link("/plans", "我的投資計畫")}
         {link("/watchlist", "觀察清單")}
         {link("/compare", "個股比較")}
+        {user?.is_admin && link("/leads", "名單與外撥")}
         {link("/reminders", "提醒中心", unread)}
         <div className="sidebar-footer">
           <button

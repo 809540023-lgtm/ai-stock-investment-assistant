@@ -23,6 +23,7 @@ class UserOut(BaseModel):
     id: int
     email: EmailStr
     name: str
+    is_admin: bool = False
 
     class Config:
         from_attributes = True
@@ -182,3 +183,58 @@ class DashboardOut(BaseModel):
     total_unrealized_pnl_percent: Optional[float]
     unread_reminders: int
     plans: list[DashboardPlan]
+
+
+# ---------- Voice (Twilio 語音外撥) ----------
+class VoiceConsentIn(BaseModel):
+    phone_number: str = Field(min_length=8, description="E.164 格式，例 +886912345678")
+    consent: bool = True
+
+
+class VoiceConsentOut(BaseModel):
+    phone_number: Optional[str]
+    voice_consent: bool
+    voice_consent_at: Optional[datetime]
+    voice_opt_out: bool
+
+    class Config:
+        from_attributes = True
+
+
+class OutboundCallIn(BaseModel):
+    """對某位會員發起 AI 語音外撥。user_id 留空則撥給目前登入者自己。"""
+    user_id: Optional[int] = None
+    brief: Optional[str] = Field(default=None, description="逐字念出的內容；留空則用已設定的預設開場白")
+    purpose: str = "custom"
+
+
+class VoiceScriptIn(BaseModel):
+    script: str = Field(default="", description="外撥時逐字念出的預設開場白")
+
+
+class VoiceScriptOut(BaseModel):
+    script: str
+
+
+class OutboundLeadCallIn(BaseModel):
+    """對已同意的名單發起外撥。"""
+    lead_id: int
+    brief: Optional[str] = Field(default=None, description="逐字念出的內容；留空則用已設定的預設開場白")
+    purpose: str = "lead_outreach"
+
+
+class VoiceCallLogOut(BaseModel):
+    id: int
+    user_id: Optional[int]
+    lead_id: Optional[int] = None
+    direction: str
+    to_number: str
+    purpose: Optional[str]
+    message: Optional[str]
+    call_sid: Optional[str]
+    status: Optional[str]
+    consent_at_call: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
